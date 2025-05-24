@@ -37,17 +37,20 @@ impl GameCodeMcpServer {
     #[tool(description = "Multiply two numbers")]
     async fn multiply(&self, #[tool(aggr)] req: MultiplyRequest) -> String {
         let result = req.a * req.b;
-        format!("{{\"result\": {}, \"operation\": \"multiplication\"}}", result)
+        format!(
+            "{{\"result\": {}, \"operation\": \"multiplication\"}}",
+            result
+        )
     }
 
     #[tool(description = "List files in a directory")]
     async fn list_files(&self, #[tool(aggr)] req: ListFilesRequest) -> String {
         let path = req.path.unwrap_or_else(|| ".".to_string());
-        
+
         match std::fs::read_dir(&path) {
             Ok(entries) => {
                 let mut files = Vec::new();
-                for entry in entries {
+                entries.into_iter().for_each(|entry| {
                     if let Ok(entry) = entry {
                         if let Ok(metadata) = entry.metadata() {
                             files.push(format!(
@@ -58,7 +61,7 @@ impl GameCodeMcpServer {
                             ));
                         }
                     }
-                }
+                });
                 format!(
                     "{{\"path\": \"{}\", \"files\": [{}]}}",
                     path,
@@ -76,13 +79,13 @@ impl ServerHandler for GameCodeMcpServer {}
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("Starting GameCode MCP Server...");
-    
+
     let server = GameCodeMcpServer;
     let transport = (stdin(), stdout());
-    
+
     let service = server.serve(transport).await?;
     let quit_reason = service.waiting().await?;
-    
+
     eprintln!("Server quit: {:?}", quit_reason);
     Ok(())
 }
