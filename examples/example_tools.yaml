@@ -1,0 +1,121 @@
+# Real-world example tools that return JSON
+
+tools:
+  # Example 1: GitHub CLI tool
+  - name: github_repo_info
+    description: Get GitHub repository information
+    command: gh
+    args:
+      - name: owner
+        description: Repository owner
+        required: true
+        type: string
+        cli_flag: null  # Part of the repo path
+      - name: repo
+        description: Repository name
+        required: true
+        type: string
+        cli_flag: null  # Part of the repo path
+    static_flags:
+      - "repo"
+      - "view"
+      - "--json"
+      - "name,description,stargazerCount,forkCount,createdAt"
+    # This would be called like: gh repo view owner/repo --json name,description...
+
+  # Example 2: Docker inspect
+  - name: docker_container_info
+    description: Get Docker container information
+    command: docker
+    args:
+      - name: container_id
+        description: Container ID or name
+        required: true
+        type: string
+        cli_flag: null
+    static_flags:
+      - "inspect"
+      - "--format"
+      - "{{json .}}"
+
+  # Example 3: AWS CLI
+  - name: aws_s3_list
+    description: List S3 bucket contents
+    command: aws
+    args:
+      - name: bucket
+        description: S3 bucket name
+        required: true
+        type: string
+        cli_flag: null
+      - name: prefix
+        description: Object prefix filter
+        required: false
+        type: string
+        cli_flag: "--prefix"
+      - name: max_items
+        description: Maximum number of items
+        required: false
+        type: number
+        cli_flag: "--max-items"
+    static_flags:
+      - "s3api"
+      - "list-objects-v2"
+      - "--bucket"
+      - "--output"
+      - "json"
+
+  # Example 4: Kubernetes
+  - name: k8s_pods
+    description: List Kubernetes pods
+    command: kubectl
+    args:
+      - name: namespace
+        description: Kubernetes namespace
+        required: false
+        type: string
+        cli_flag: "-n"
+      - name: selector
+        description: Label selector
+        required: false
+        type: string
+        cli_flag: "-l"
+    static_flags:
+      - "get"
+      - "pods"
+      - "-o"
+      - "json"
+
+  # Example 5: Your custom work tool
+  - name: my_work_analyzer
+    description: Analyze work data and return metrics
+    command: /usr/local/bin/work-analyzer
+    args:
+      - name: project_id
+        description: Project identifier
+        required: true
+        type: string
+        cli_flag: "--project"
+      - name: start_date
+        description: Analysis start date (YYYY-MM-DD)
+        required: false
+        type: string
+        cli_flag: "--from"
+      - name: end_date
+        description: Analysis end date (YYYY-MM-DD)
+        required: false
+        type: string
+        cli_flag: "--to"
+      - name: metrics
+        description: Comma-separated list of metrics to include
+        required: false
+        type: string
+        cli_flag: "--metrics"
+    static_flags:
+      - "--output"
+      - "json"
+      - "--no-color"
+
+# The beauty is that each of these tools returns JSON directly,
+# and the MCP server automatically wraps it in JSONRPC format.
+# No additional conversion code needed!

@@ -1,0 +1,145 @@
+# Example showing exact CLI argument mapping
+
+tools:
+  # Your userinfo CLI tool
+  - name: userinfo
+    description: Get user information for a specific date range
+    command: userinfo
+    args:
+      # Each argument maps directly to a CLI flag
+      - name: org
+        description: Organization identifier
+        required: true
+        type: string
+        cli_flag: "--org"          # This becomes: --org someorg
+      
+      - name: username
+        description: Username to query
+        required: true
+        type: string
+        cli_flag: "--username"      # This becomes: --username user123
+      
+      - name: startdate
+        description: Start date (YYYYMMDD format)
+        required: true
+        type: string
+        cli_flag: "--startdate"     # This becomes: --startdate 20240304
+      
+      - name: enddate
+        description: End date (YYYYMMDD format)
+        required: true
+        type: string
+        cli_flag: "--enddate"       # This becomes: --enddate 20240601
+    
+    example_output:
+      user:
+        username: "user123"
+        org: "someorg"
+        full_name: "John Doe"
+        email: "user123@someorg.com"
+      activity:
+        date_range:
+          start: "2024-03-04"
+          end: "2024-06-01"
+        total_logins: 145
+        last_login: "2024-06-01T14:23:00Z"
+        sessions:
+          - date: "2024-06-01"
+            duration_minutes: 45
+            actions: 23
+
+# When Claude calls this tool:
+# mcp__gamecode__run_tool({
+#   "tool": "userinfo",
+#   "params": {
+#     "org": "someorg",
+#     "username": "user123", 
+#     "startdate": "20240304",
+#     "enddate": "20240601"
+#   }
+# })
+#
+# The framework builds this command:
+# userinfo --org someorg --username user123 --startdate 20240304 --enddate 20240601
+
+# More examples showing different argument patterns:
+
+  # Example with short flags
+  - name: data_export
+    description: Export data with various options
+    command: /usr/local/bin/exporter
+    args:
+      - name: output_file
+        description: Output file path
+        required: true
+        type: string
+        cli_flag: "-o"              # Short flag: -o output.json
+      
+      - name: format
+        description: Export format
+        required: false
+        type: string
+        cli_flag: "-f"              # Short flag: -f csv
+        default: "json"
+      
+      - name: verbose
+        description: Enable verbose output
+        required: false
+        type: boolean
+        cli_flag: "-v"              # Boolean flag: -v (only added if true)
+
+  # Example with positional arguments (no flag)
+  - name: file_processor
+    description: Process files with options
+    command: processor
+    args:
+      # Positional arguments have cli_flag: null
+      - name: input_file
+        description: Input file to process
+        required: true
+        type: string
+        cli_flag: null              # First positional arg
+      
+      - name: output_file
+        description: Output file path
+        required: true
+        type: string
+        cli_flag: null              # Second positional arg
+      
+      # Then named flags
+      - name: compression
+        description: Compression level (1-9)
+        required: false
+        type: number
+        cli_flag: "--compress"      # --compress 5
+
+  # Example with complex flags
+  - name: report_generator
+    description: Generate reports with multiple filters
+    command: /opt/reporting/generate
+    args:
+      - name: report_type
+        description: Type of report (daily, weekly, monthly)
+        required: true
+        type: string
+        cli_flag: "--type"
+      
+      - name: departments
+        description: Comma-separated list of departments
+        required: false
+        type: string
+        cli_flag: "--departments"   # --departments "sales,marketing,eng"
+      
+      - name: include_charts
+        description: Include visual charts
+        required: false
+        type: boolean
+        cli_flag: "--charts"        # --charts (only if true)
+      
+      - name: email_to
+        description: Email addresses for report delivery
+        required: false
+        type: string
+        cli_flag: "--email"         # --email "user@example.com"
+
+# The framework handles all these patterns automatically!

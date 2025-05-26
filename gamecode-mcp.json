@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "gamecode-mcp": {
-      "command": "cargo",
-      "args": ["run", "--manifest-path", "/Users/navicore/git/navicore/gamecode-mcp/Cargo.toml"],
-      "env": {}
-    }
-  }
-}

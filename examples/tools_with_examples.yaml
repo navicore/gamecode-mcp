@@ -1,0 +1,188 @@
+# CLI Tools with Example Outputs - Best Practice Configuration
+
+tools:
+  # System metrics tool
+  - name: system_metrics
+    description: Get current system performance metrics
+    command: /usr/local/bin/sys-metrics
+    args:
+      - name: include_processes
+        description: Include per-process breakdown
+        required: false
+        type: boolean
+        cli_flag: "--processes"
+    example_output:
+      status: "healthy"
+      timestamp: "2024-01-25T10:30:00Z"
+      metrics:
+        cpu:
+          usage_percent: 23.5
+          cores: 8
+          load_average: [1.2, 1.5, 1.8]
+        memory:
+          total_gb: 32
+          used_gb: 18.5
+          available_gb: 13.5
+          swap_used_gb: 0
+        disk:
+          total_gb: 500
+          used_gb: 234
+          free_gb: 266
+        network:
+          interfaces:
+            - name: "eth0"
+              rx_mbps: 125.3
+              tx_mbps: 89.2
+
+  # Database query tool
+  - name: db_stats
+    description: Query database statistics and health metrics
+    command: /opt/tools/db-query
+    args:
+      - name: database
+        description: Target database name
+        required: true
+        type: string
+        cli_flag: "--db"
+      - name: query_type
+        description: Type of stats to retrieve (connections, performance, storage)
+        required: false
+        type: string
+        cli_flag: "--type"
+        default: "all"
+    static_flags:
+      - "--format"
+      - "json"
+    example_output:
+      database: "production_db"
+      status: "online"
+      stats:
+        connections:
+          active: 45
+          idle: 10
+          max: 100
+          avg_duration_ms: 23.4
+        performance:
+          queries_per_second: 1523
+          cache_hit_ratio: 0.94
+          slow_queries_count: 3
+        storage:
+          size_mb: 4532
+          index_size_mb: 892
+          table_count: 47
+
+  # API health checker
+  - name: api_health
+    description: Check health status of API endpoints
+    command: /usr/local/bin/api-checker
+    args:
+      - name: endpoint
+        description: API endpoint URL to check
+        required: true
+        type: string
+        cli_flag: "--url"
+      - name: timeout
+        description: Request timeout in seconds
+        required: false
+        type: number
+        cli_flag: "--timeout"
+        default: "30"
+    example_output:
+      endpoint: "https://api.example.com/v1/health"
+      status: "healthy"
+      response_time_ms: 145
+      checks:
+        - name: "database"
+          status: "pass"
+          response_time_ms: 12
+        - name: "cache" 
+          status: "pass"
+          response_time_ms: 2
+        - name: "external_service"
+          status: "pass"
+          response_time_ms: 89
+      timestamp: "2024-01-25T10:30:00Z"
+
+  # Log analyzer
+  - name: analyze_logs
+    description: Analyze application logs for errors and patterns
+    command: /opt/tools/log-analyzer
+    args:
+      - name: log_file
+        description: Path to log file or directory
+        required: true
+        type: string
+        cli_flag: "--input"
+      - name: time_range
+        description: Time range to analyze (e.g., "1h", "24h", "7d")
+        required: false
+        type: string
+        cli_flag: "--range"
+        default: "1h"
+      - name: severity
+        description: Minimum severity level (debug, info, warn, error)
+        required: false
+        type: string
+        cli_flag: "--severity"
+        default: "warn"
+    example_output:
+      analysis_period:
+        start: "2024-01-25T09:30:00Z"
+        end: "2024-01-25T10:30:00Z"
+      summary:
+        total_entries: 15234
+        errors: 23
+        warnings: 156
+        unique_errors: 5
+      top_errors:
+        - message: "Database connection timeout"
+          count: 12
+          first_seen: "2024-01-25T09:45:23Z"
+          last_seen: "2024-01-25T10:28:11Z"
+        - message: "Failed to parse JSON response"
+          count: 8
+          first_seen: "2024-01-25T10:12:34Z"
+          last_seen: "2024-01-25T10:25:45Z"
+      patterns:
+        - pattern: "timeout"
+          occurrences: 34
+          severity_distribution:
+            error: 12
+            warn: 22
+
+  # Deployment info
+  - name: deployment_status
+    description: Get current deployment status and version information
+    command: /usr/local/bin/deploy-info
+    args:
+      - name: environment
+        description: Target environment (dev, staging, production)
+        required: true
+        type: string
+        cli_flag: "--env"
+      - name: service
+        description: Specific service name (optional, defaults to all)
+        required: false
+        type: string
+        cli_flag: "--service"
+    example_output:
+      environment: "production"
+      last_deployment: "2024-01-24T18:45:00Z"
+      services:
+        - name: "api-gateway"
+          version: "2.3.1"
+          status: "running"
+          instances: 3
+          health: "healthy"
+        - name: "auth-service"
+          version: "1.8.5"
+          status: "running"
+          instances: 2
+          health: "healthy"
+        - name: "data-processor"
+          version: "3.1.0"
+          status: "running"
+          instances: 5
+          health: "degraded"
+          issues:
+            - "High memory usage on instance 3"

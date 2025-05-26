@@ -1,0 +1,81 @@
+# Example configuration for CLI tools
+# This shows how you could define tools in a config file
+
+tools:
+  - name: json_prettify
+    description: Pretty print JSON data
+    command: jq
+    args:
+      - name: filter
+        description: JQ filter expression (default is '.')
+        required: false
+        type: string
+        default: "."
+        cli_flag: null  # positional argument
+      - name: compact
+        description: Produce compact output
+        required: false
+        type: boolean
+        cli_flag: "-c"
+      - name: sort_keys
+        description: Sort object keys
+        required: false
+        type: boolean
+        cli_flag: "-S"
+
+  - name: base64_encode
+    description: Encode input as base64
+    command: base64
+    args:
+      - name: input
+        description: String to encode
+        required: true
+        type: string
+        cli_flag: null  # stdin input
+
+  - name: hash_file
+    description: Calculate file hash
+    command: shasum
+    args:
+      - name: algorithm
+        description: Hash algorithm (1, 224, 256, 384, 512)
+        required: false
+        type: string
+        default: "256"
+        cli_flag: "-a"
+      - name: file_path
+        description: Path to file
+        required: true
+        type: string
+        cli_flag: null
+
+  - name: curl_json
+    description: Fetch JSON from URL
+    command: curl
+    args:
+      - name: url
+        description: URL to fetch
+        required: true
+        type: string
+        cli_flag: null
+      - name: method
+        description: HTTP method
+        required: false
+        type: string
+        default: "GET"
+        cli_flag: "-X"
+      - name: headers
+        description: HTTP headers
+        required: false
+        type: array
+        cli_flag: "-H"
+      - name: data
+        description: Request body
+        required: false
+        type: string
+        cli_flag: "-d"
+    # Additional flags that are always included
+    static_flags:
+      - "-s"  # silent
+      - "-S"  # show errors
+      - "-L"  # follow redirects
