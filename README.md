@@ -1,3 +1,6 @@
+[![Dependabot Updates](https://github.com/navicore/gamecode-mcp/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/navicore/gamecode-mcp/actions/workflows/dependabot/dependabot-updates)
+[![Rust CI](https://github.com/navicore/gamecode-mcp/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/navicore/gamecode-mcp/actions/workflows/rust-ci.yml)
+
 # GameCode MCP Server
 
 A Rust-based MCP (Model Context Protocol) server that provides dynamic CLI tool integration for Claude through a simple YAML configuration.
@@ -15,7 +18,7 @@ The server loads all tools from a `tools.yaml` configuration file. This means:
 ### Example Built-in Tools (from tools.yaml)
 
 1. **add** - Add two numbers together
-2. **multiply** - Multiply two numbers  
+2. **multiply** - Multiply two numbers
 3. **list_files** - List files in a directory
 
 All tools are defined in your `tools.yaml` file - remove what you don't need, add your own!
