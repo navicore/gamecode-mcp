@@ -1,7 +1,7 @@
-use rmcp::{schemars, tool, ServerHandler, ServiceExt};
+use rmcp::{ServerHandler, ServiceExt, schemars, tool};
 use std::collections::HashMap;
 use tokio::io::{stdin, stdout};
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
 
 mod cli_tool;
 mod dynamic_tools;
@@ -97,7 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("gamecode_mcp=info".parse().unwrap())
+                .add_directive("gamecode_mcp=info".parse().unwrap()),
         )
         .with_writer(std::io::stderr)
         .init();

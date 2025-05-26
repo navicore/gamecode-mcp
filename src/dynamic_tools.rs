@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
 #[derive(Debug, Deserialize)]
 struct ToolConfig {
