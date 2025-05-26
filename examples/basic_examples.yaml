@@ -1,5 +1,7 @@
-# Example configuration for CLI tools
-# This shows how you could define tools in a config file
+# Basic CLI Tool Examples
+# =======================
+# Simple examples showing common CLI tool patterns
+# These work with standard Unix/Linux commands
 
 tools:
   - name: json_prettify

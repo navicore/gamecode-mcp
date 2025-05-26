@@ -14,6 +14,7 @@ pub struct CliTool {
 #[derive(Debug, Clone)]
 pub struct CliArg {
     pub name: String,
+    #[allow(dead_code)]
     pub description: String,
     pub required: bool,
     pub arg_type: ArgType,
@@ -73,32 +74,44 @@ impl CliTool {
 
         Ok(json_result.to_string())
     }
-    
-    async fn execute_internal(&self, handler: &str, params: HashMap<String, Value>) -> Result<String, String> {
+
+    async fn execute_internal(
+        &self,
+        handler: &str,
+        params: HashMap<String, Value>,
+    ) -> Result<String, String> {
         match handler {
             "add" => {
-                let a = params.get("a")
+                let a = params
+                    .get("a")
                     .and_then(|v| v.as_f64())
                     .ok_or("Missing or invalid parameter 'a'")?;
-                let b = params.get("b")
+                let b = params
+                    .get("b")
                     .and_then(|v| v.as_f64())
                     .ok_or("Missing or invalid parameter 'b'")?;
-                Ok(format!(r#"{{"result": {}, "operation": "addition"}}"#, a + b))
+                Ok(format!(
+                    r#"{{"result": {}, "operation": "addition"}}"#,
+                    a + b
+                ))
             }
             "multiply" => {
-                let a = params.get("a")
+                let a = params
+                    .get("a")
                     .and_then(|v| v.as_f64())
                     .ok_or("Missing or invalid parameter 'a'")?;
-                let b = params.get("b")
+                let b = params
+                    .get("b")
                     .and_then(|v| v.as_f64())
                     .ok_or("Missing or invalid parameter 'b'")?;
-                Ok(format!(r#"{{"result": {}, "operation": "multiplication"}}"#, a * b))
+                Ok(format!(
+                    r#"{{"result": {}, "operation": "multiplication"}}"#,
+                    a * b
+                ))
             }
             "list_files" => {
-                let path = params.get("path")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or(".");
-                
+                let path = params.get("path").and_then(|v| v.as_str()).unwrap_or(".");
+
                 match std::fs::read_dir(path) {
                     Ok(entries) => {
                         let mut files = Vec::new();
@@ -123,7 +136,7 @@ impl CliTool {
                     Err(e) => Ok(format!(r#"{{"error": "{}"}}"#, e)),
                 }
             }
-            _ => Err(format!("Unknown internal handler: {}", handler))
+            _ => Err(format!("Unknown internal handler: {}", handler)),
         }
     }
 

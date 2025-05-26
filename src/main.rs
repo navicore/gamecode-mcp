@@ -1,9 +1,8 @@
 use rmcp::{schemars, tool, ServerHandler, ServiceExt};
-use tokio::io::{stdin, stdout};
 use std::collections::HashMap;
+use tokio::io::{stdin, stdout};
 
 mod cli_tool;
-mod tool_registry;
 mod dynamic_tools;
 
 use dynamic_tools::DynamicToolManager;
@@ -16,7 +15,7 @@ pub struct RunToolRequest {
     pub params: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GameCodeMcpServer {
     tool_manager: DynamicToolManager,
 }
@@ -27,7 +26,7 @@ impl GameCodeMcpServer {
             tool_manager: DynamicToolManager::new(),
         }
     }
-    
+
     pub async fn initialize(&self) {
         if let Err(e) = self.tool_manager.load_from_default_locations().await {
             eprintln!("WARNING: {}", e);
@@ -47,22 +46,26 @@ impl GameCodeMcpServer {
             Err(e) => format!(r#"{{"error": "{}"}}"#, e),
         }
     }
-    
+
     #[tool(description = "List all available tools from tools.yaml")]
     async fn list_tools(&self) -> String {
         let tools = self.tool_manager.list_tools().await;
-        
-        let tool_list: Vec<serde_json::Value> = tools.into_iter()
-            .map(|(name, desc)| serde_json::json!({
-                "name": name,
-                "description": desc
-            }))
+
+        let tool_list: Vec<serde_json::Value> = tools
+            .into_iter()
+            .map(|(name, desc)| {
+                serde_json::json!({
+                    "name": name,
+                    "description": desc
+                })
+            })
             .collect();
-        
+
         serde_json::json!({
             "tools": tool_list,
             "total": tool_list.len()
-        }).to_string()
+        })
+        .to_string()
     }
 }
 
@@ -72,9 +75,7 @@ impl ServerHandler for GameCodeMcpServer {
         rmcp::model::ServerInfo {
             protocol_version: Default::default(),
             capabilities: rmcp::model::ServerCapabilities {
-                tools: Some(rmcp::model::ToolsCapability { 
-                    list_changed: None 
-                }),
+                tools: Some(rmcp::model::ToolsCapability { list_changed: None }),
                 ..Default::default()
             },
             server_info: rmcp::model::Implementation {
@@ -82,7 +83,8 @@ impl ServerHandler for GameCodeMcpServer {
                 version: env!("CARGO_PKG_VERSION").to_string(),
             },
             instructions: Some(
-                "GameCode MCP Server - Dynamic CLI tool integration. Configure tools in tools.yaml".to_string()
+                "GameCode MCP Server - Dynamic CLI tool integration. Configure tools in tools.yaml"
+                    .to_string(),
             ),
         }
     }
@@ -90,11 +92,14 @@ impl ServerHandler for GameCodeMcpServer {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    eprintln!("Starting GameCode MCP Server v{}...", env!("CARGO_PKG_VERSION"));
+    eprintln!(
+        "Starting GameCode MCP Server v{}...",
+        env!("CARGO_PKG_VERSION")
+    );
     eprintln!("Loading tool configuration...");
 
     let server = GameCodeMcpServer::new();
-    
+
     // Initialize the server and load tools
     server.initialize().await;
     eprintln!("Server initialized");

@@ -16,6 +16,7 @@ struct ToolDefinition {
     description: String,
     command: String,
     args: Vec<ArgDefinition>,
+    #[allow(dead_code)]
     #[serde(default)]
     static_flags: Vec<String>,
     internal_handler: Option<String>,
@@ -29,11 +30,12 @@ struct ArgDefinition {
     #[serde(rename = "type")]
     arg_type: String,
     cli_flag: Option<String>,
+    #[allow(dead_code)]
     #[serde(default)]
     default: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct DynamicToolManager {
     tools: Arc<RwLock<HashMap<String, CliTool>>>,
 }
@@ -61,18 +63,22 @@ impl DynamicToolManager {
 
         Ok(())
     }
-    
+
     pub async fn load_from_default_locations(&self) -> Result<(), String> {
         // Check locations in precedence order
         let locations = vec![
             // 1. Environment variable
             std::env::var("GAMECODE_TOOLS_FILE").ok(),
             // 2. User config directory
-            home::home_dir().map(|d| d.join(".config/gamecode-mcp/tools.yaml").to_string_lossy().to_string()),
+            home::home_dir().map(|d| {
+                d.join(".config/gamecode-mcp/tools.yaml")
+                    .to_string_lossy()
+                    .to_string()
+            }),
             // 3. Current directory
             Some("./tools.yaml".to_string()),
         ];
-        
+
         for location in locations.into_iter().flatten() {
             eprintln!("Checking for tools config at: {}", location);
             if std::path::Path::new(&location).exists() {
@@ -80,9 +86,8 @@ impl DynamicToolManager {
                 return self.load_from_yaml(&location).await;
             }
         }
-        
-        Err(format!(
-            "No tools.yaml found!\n\n\
+
+        Err("No tools.yaml found!\n\n\
             To get started:\n\
             1. Copy tools.yaml.example to one of these locations:\n\
                - $GAMECODE_TOOLS_FILE (if set)\n\
@@ -91,7 +96,7 @@ impl DynamicToolManager {
             2. Customize it with your tools\n\
             3. Restart Claude Desktop\n\n\
             Example: cp tools.yaml.example ~/.config/gamecode-mcp/tools.yaml"
-        ))
+            .to_string())
     }
 
     fn convert_to_cli_tool(&self, def: ToolDefinition) -> Result<CliTool, String> {
@@ -146,8 +151,6 @@ impl DynamicToolManager {
             .collect()
     }
 }
-
-
 
 // Example of what the YAML tools would return:
 //
