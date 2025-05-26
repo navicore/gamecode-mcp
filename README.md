@@ -6,6 +6,9 @@
 A Rust-based MCP (Model Context Protocol) server that provides dynamic CLI tool
 integration for Claude through a simple YAML configuration.
 
+__Caution__: _This is early-days for MCP and this is likely an irresponsibly naive
+implementation - use accordingly!!_
+
 ## Philosophy: Thoughtful Tool Design
 
 LLMs famously don't do well with huge context windows even when they technically
