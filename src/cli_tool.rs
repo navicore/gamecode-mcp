@@ -187,3 +187,153 @@ macro_rules! define_cli_tool {
         }
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_format_string_value() {
+        let tool = CliTool {
+            name: "test".to_string(),
+            description: "test tool".to_string(),
+            command: "echo".to_string(),
+            args: vec![],
+            internal_handler: None,
+        };
+        
+        let value = json!("hello world");
+        let result = tool.format_value(&value, &ArgType::String);
+        assert_eq!(result.unwrap(), "hello world");
+    }
+
+    #[test]
+    fn test_format_number_value() {
+        let tool = CliTool {
+            name: "test".to_string(),
+            description: "test tool".to_string(),
+            command: "echo".to_string(),
+            args: vec![],
+            internal_handler: None,
+        };
+        
+        let value = json!(42.5);
+        let result = tool.format_value(&value, &ArgType::Number);
+        assert_eq!(result.unwrap(), "42.5");
+    }
+
+    #[test]
+    fn test_format_boolean_value() {
+        let tool = CliTool {
+            name: "test".to_string(),
+            description: "test tool".to_string(),
+            command: "echo".to_string(),
+            args: vec![],
+            internal_handler: None,
+        };
+        
+        let value = json!(true);
+        let result = tool.format_value(&value, &ArgType::Boolean);
+        assert_eq!(result.unwrap(), "true");
+    }
+
+    #[test]
+    fn test_format_array_value() {
+        let tool = CliTool {
+            name: "test".to_string(),
+            description: "test tool".to_string(),
+            command: "echo".to_string(),
+            args: vec![],
+            internal_handler: None,
+        };
+        
+        let value = json!(["item1", "item2"]);
+        let result = tool.format_value(&value, &ArgType::Array);
+        assert_eq!(result.unwrap(), r#"["item1","item2"]"#);
+    }
+
+    #[tokio::test]
+    async fn test_internal_handler_add() {
+        let tool = CliTool {
+            name: "add".to_string(),
+            description: "Add two numbers".to_string(),
+            command: "internal".to_string(),
+            args: vec![],
+            internal_handler: Some("add".to_string()),
+        };
+
+        let mut params = HashMap::new();
+        params.insert("a".to_string(), json!(5.5));
+        params.insert("b".to_string(), json!(2.5));
+
+        let result = tool.execute(params).await.unwrap();
+        let parsed: Value = serde_json::from_str(&result).unwrap();
+        
+        assert_eq!(parsed["result"], 8.0);
+        assert_eq!(parsed["operation"], "addition");
+    }
+
+    #[tokio::test]
+    async fn test_internal_handler_multiply() {
+        let tool = CliTool {
+            name: "multiply".to_string(),
+            description: "Multiply two numbers".to_string(),
+            command: "internal".to_string(),
+            args: vec![],
+            internal_handler: Some("multiply".to_string()),
+        };
+
+        let mut params = HashMap::new();
+        params.insert("a".to_string(), json!(4));
+        params.insert("b".to_string(), json!(7));
+
+        let result = tool.execute(params).await.unwrap();
+        let parsed: Value = serde_json::from_str(&result).unwrap();
+        
+        assert_eq!(parsed["result"], 28);
+        assert_eq!(parsed["operation"], "multiplication");
+    }
+
+    #[tokio::test]
+    async fn test_missing_required_argument() {
+        let tool = CliTool {
+            name: "test".to_string(),
+            description: "test tool".to_string(),
+            command: "echo".to_string(),
+            args: vec![
+                CliArg {
+                    name: "required_arg".to_string(),
+                    description: "A required argument".to_string(),
+                    required: true,
+                    arg_type: ArgType::String,
+                    cli_flag: Some("--input".to_string()),
+                }
+            ],
+            internal_handler: None,
+        };
+
+        let params = HashMap::new(); // Empty params
+        let result = tool.execute(params).await;
+        
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Missing required argument: required_arg"));
+    }
+
+    #[tokio::test]
+    async fn test_unknown_internal_handler() {
+        let tool = CliTool {
+            name: "test".to_string(),
+            description: "test tool".to_string(),
+            command: "internal".to_string(),
+            args: vec![],
+            internal_handler: Some("unknown_handler".to_string()),
+        };
+
+        let params = HashMap::new();
+        let result = tool.execute(params).await;
+        
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unknown internal handler: unknown_handler"));
+    }
+}
