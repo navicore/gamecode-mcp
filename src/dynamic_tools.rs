@@ -166,3 +166,164 @@ impl DynamicToolManager {
 // }
 //
 // The rmcp crate handles the JSONRPC wrapper - your tool just returns the JSON string!
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+    use std::fs::File;
+    use std::io::Write;
+
+    #[tokio::test]
+    async fn test_load_from_yaml_valid() {
+        let temp_dir = TempDir::new().unwrap();
+        let yaml_path = temp_dir.path().join("test_tools.yaml");
+        
+        let yaml_content = r#"
+tools:
+  - name: test_tool
+    description: A test tool
+    command: echo
+    args:
+      - name: message
+        description: Message to echo
+        required: true
+        type: string
+        cli_flag: null
+    internal_handler: null
+"#;
+        
+        let mut file = File::create(&yaml_path).unwrap();
+        file.write_all(yaml_content.as_bytes()).unwrap();
+        
+        let manager = DynamicToolManager::new();
+        let result = manager.load_from_yaml(yaml_path.to_str().unwrap()).await;
+        
+        assert!(result.is_ok());
+        
+        let tools = manager.list_tools().await;
+        assert_eq!(tools.len(), 1);
+        assert_eq!(tools[0].0, "test_tool");
+        assert_eq!(tools[0].1, "A test tool");
+    }
+
+    #[tokio::test]
+    async fn test_load_from_yaml_invalid() {
+        let temp_dir = TempDir::new().unwrap();
+        let yaml_path = temp_dir.path().join("invalid.yaml");
+        
+        let yaml_content = r#"
+tools:
+  - name: test_tool
+    description: Missing required fields
+"#;
+        
+        let mut file = File::create(&yaml_path).unwrap();
+        file.write_all(yaml_content.as_bytes()).unwrap();
+        
+        let manager = DynamicToolManager::new();
+        let result = manager.load_from_yaml(yaml_path.to_str().unwrap()).await;
+        
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to parse YAML"));
+    }
+
+    #[tokio::test]
+    async fn test_convert_arg_types() {
+        let temp_dir = TempDir::new().unwrap();
+        let yaml_path = temp_dir.path().join("arg_types.yaml");
+        
+        let yaml_content = r#"
+tools:
+  - name: arg_test
+    description: Test various arg types
+    command: test
+    args:
+      - name: str_arg
+        description: String argument
+        required: true
+        type: string
+        cli_flag: "--string"
+      - name: num_arg
+        description: Number argument
+        required: false
+        type: number
+        cli_flag: "--number"
+      - name: bool_arg
+        description: Boolean argument
+        required: false
+        type: boolean
+        cli_flag: "--bool"
+      - name: arr_arg
+        description: Array argument
+        required: false
+        type: array
+        cli_flag: "--array"
+"#;
+        
+        let mut file = File::create(&yaml_path).unwrap();
+        file.write_all(yaml_content.as_bytes()).unwrap();
+        
+        let manager = DynamicToolManager::new();
+        manager.load_from_yaml(yaml_path.to_str().unwrap()).await.unwrap();
+        
+        let tools = manager.tools.read().await;
+        let tool = tools.get("arg_test").unwrap();
+        
+        assert_eq!(tool.args.len(), 4);
+        assert!(matches!(tool.args[0].arg_type, ArgType::String));
+        assert!(matches!(tool.args[1].arg_type, ArgType::Number));
+        assert!(matches!(tool.args[2].arg_type, ArgType::Boolean));
+        assert!(matches!(tool.args[3].arg_type, ArgType::Array));
+    }
+
+    #[tokio::test]
+    async fn test_execute_nonexistent_tool() {
+        let manager = DynamicToolManager::new();
+        let result = manager.execute_tool("nonexistent", HashMap::new()).await;
+        
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Tool not found: nonexistent");
+    }
+
+    #[tokio::test]
+    async fn test_load_tool_with_internal_handler() {
+        let temp_dir = TempDir::new().unwrap();
+        let yaml_path = temp_dir.path().join("internal.yaml");
+        
+        let yaml_content = r#"
+tools:
+  - name: internal_add
+    description: Internal add handler
+    command: internal
+    args:
+      - name: a
+        description: First number
+        required: true
+        type: number
+        cli_flag: null
+      - name: b
+        description: Second number
+        required: true
+        type: number
+        cli_flag: null
+    internal_handler: add
+"#;
+        
+        let mut file = File::create(&yaml_path).unwrap();
+        file.write_all(yaml_content.as_bytes()).unwrap();
+        
+        let manager = DynamicToolManager::new();
+        manager.load_from_yaml(yaml_path.to_str().unwrap()).await.unwrap();
+        
+        let mut params = HashMap::new();
+        params.insert("a".to_string(), serde_json::json!(3));
+        params.insert("b".to_string(), serde_json::json!(4));
+        
+        let result = manager.execute_tool("internal_add", params).await.unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        
+        assert_eq!(parsed["result"], 7);
+        assert_eq!(parsed["operation"], "addition");
+    }
+}

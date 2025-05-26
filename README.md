@@ -3,7 +3,19 @@
 
 # GameCode MCP Server
 
-A Rust-based MCP (Model Context Protocol) server that provides dynamic CLI tool integration for Claude through a simple YAML configuration.
+A Rust-based MCP (Model Context Protocol) server that provides dynamic CLI tool
+integration for Claude through a simple YAML configuration.
+
+## Philosophy: Thoughtful Tool Design
+
+LLMs famously don't do well with huge context windows even when they technically
+support them - so massive tool counts can erode performance.
+
+Also, analogous to how you should design GraphQL schemas around personas and use
+cases rather than mirroring all your database schemas, you should thoughtfully
+select and configure your MCP tools. This is why we use YAML configuration
+instead of automatically consuming OpenAPI specs or DB connection strings for
+code generation.
 
 ## Features
 
