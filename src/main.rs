@@ -1,6 +1,7 @@
 use rmcp::{schemars, tool, ServerHandler, ServiceExt};
 use std::collections::HashMap;
 use tokio::io::{stdin, stdout};
+use tracing::{info, warn, error, debug};
 
 mod cli_tool;
 mod dynamic_tools;
@@ -29,9 +30,9 @@ impl GameCodeMcpServer {
 
     pub async fn initialize(&self) {
         if let Err(e) = self.tool_manager.load_from_default_locations().await {
-            eprintln!("WARNING: {}", e);
-            eprintln!("\nThe server will start but no tools will be available.");
-            eprintln!("Please create a tools.yaml file to enable tools.");
+            warn!("{}", e);
+            warn!("The server will start but no tools will be available.");
+            warn!("Please create a tools.yaml file to enable tools.");
         }
     }
 }
@@ -92,46 +93,55 @@ impl ServerHandler for GameCodeMcpServer {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    eprintln!(
+    // Initialize tracing
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive("gamecode_mcp=info".parse().unwrap())
+        )
+        .with_writer(std::io::stderr)
+        .init();
+
+    info!(
         "Starting GameCode MCP Server v{}...",
         env!("CARGO_PKG_VERSION")
     );
-    eprintln!("Loading tool configuration...");
+    info!("Loading tool configuration...");
 
     let server = GameCodeMcpServer::new();
 
     // Initialize the server and load tools
     server.initialize().await;
-    eprintln!("Server initialized");
+    info!("Server initialized");
 
     let transport = (stdin(), stdout());
-    eprintln!("Transport setup complete");
+    debug!("Transport setup complete");
 
-    eprintln!("Starting MCP service...");
+    info!("Starting MCP service...");
     let service = match server.serve(transport).await {
         Ok(s) => {
-            eprintln!("MCP service started successfully!");
-            eprintln!("Use 'list_tools' to see available tools");
+            info!("MCP service started successfully!");
+            info!("Use 'list_tools' to see available tools");
             s
         }
         Err(e) => {
-            eprintln!("ERROR: Failed to start MCP service: {:?}", e);
+            error!("Failed to start MCP service: {:?}", e);
             return Err(e.into());
         }
     };
 
-    eprintln!("Service is running, waiting for requests...");
+    info!("Service is running, waiting for requests...");
     let quit_reason = match service.waiting().await {
         Ok(reason) => {
-            eprintln!("Service terminated normally: {:?}", reason);
+            info!("Service terminated normally: {:?}", reason);
             reason
         }
         Err(e) => {
-            eprintln!("ERROR: Service error while waiting: {:?}", e);
+            error!("Service error while waiting: {:?}", e);
             return Err(e.into());
         }
     };
 
-    eprintln!("Server quit: {:?}", quit_reason);
+    info!("Server quit: {:?}", quit_reason);
     Ok(())
 }

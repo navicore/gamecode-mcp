@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tracing::{info, debug};
 
 #[derive(Debug, Deserialize)]
 struct ToolConfig {
@@ -80,9 +81,9 @@ impl DynamicToolManager {
         ];
 
         for location in locations.into_iter().flatten() {
-            eprintln!("Checking for tools config at: {}", location);
+            debug!("Checking for tools config at: {}", location);
             if std::path::Path::new(&location).exists() {
-                eprintln!("Loading tools from: {}", location);
+                info!("Loading tools from: {}", location);
                 return self.load_from_yaml(&location).await;
             }
         }
