@@ -70,14 +70,14 @@ impl DynamicToolManager {
         let locations = vec![
             // 1. Environment variable
             std::env::var("GAMECODE_TOOLS_FILE").ok(),
-            // 2. User config directory
+            // 2. Current directory (project-specific)
+            Some("./tools.yaml".to_string()),
+            // 3. User config directory (user defaults)
             home::home_dir().map(|d| {
                 d.join(".config/gamecode-mcp/tools.yaml")
                     .to_string_lossy()
                     .to_string()
             }),
-            // 3. Current directory
-            Some("./tools.yaml".to_string()),
         ];
 
         for location in locations.into_iter().flatten() {
@@ -92,8 +92,8 @@ impl DynamicToolManager {
             To get started:\n\
             1. Copy tools.yaml.example to one of these locations:\n\
                - $GAMECODE_TOOLS_FILE (if set)\n\
-               - ~/.config/gamecode-mcp/tools.yaml\n\
-               - ./tools.yaml\n\
+               - ./tools.yaml (project-specific)\n\
+               - ~/.config/gamecode-mcp/tools.yaml (user defaults)\n\
             2. Customize it with your tools\n\
             3. Restart Claude Desktop\n\n\
             Example: cp tools.yaml.example ~/.config/gamecode-mcp/tools.yaml"

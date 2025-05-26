@@ -75,8 +75,8 @@ All tools are defined in your `tools.yaml` file - remove what you don't need, ad
 
 The server looks for `tools.yaml` in these locations (in order):
 1. Path specified in `$GAMECODE_TOOLS_FILE` environment variable
-2. `~/.config/gamecode-mcp/tools.yaml` (recommended)
-3. `./tools.yaml` (current directory)
+2. `./tools.yaml` (current directory - for project-specific tools)
+3. `~/.config/gamecode-mcp/tools.yaml` (user defaults)
 
 To get started:
 ```bash
