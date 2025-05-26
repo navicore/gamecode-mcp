@@ -1,0 +1,279 @@
+# GameCode MCP Tools Configuration
+# ================================
+#
+# This file defines CLI tools that will be available to Claude through the MCP server.
+# To get started:
+#
+# 1. Copy this file to tools.yaml in one of these locations (checked in order):
+#    - $GAMECODE_TOOLS_FILE (if you set this environment variable)
+#    - ~/.config/gamecode-mcp/tools.yaml (recommended for personal tools)
+#    - ./tools.yaml (in the directory where you run Claude)
+#
+# 2. Customize the tools below - remove ones you don't need, add your own
+#
+# 3. Restart Claude Desktop to load your changes
+#
+# HOW IT WORKS
+# ------------
+# Each tool you define here becomes available to Claude as an MCP tool.
+# When Claude calls a tool, this server:
+# 1. Maps the parameters Claude provides to CLI arguments
+# 2. Executes the command
+# 3. Returns the output (which should be JSON) back to Claude
+#
+# TOOL DEFINITION FORMAT
+# ---------------------
+# tools:
+#   - name: tool_name           # What Claude will call this tool
+#     description: "..."        # Helps Claude understand when to use it
+#     command: /path/to/tool    # The actual command to run
+#     args:                     # Arguments the tool accepts
+#       - name: param_name      # Name Claude uses
+#         description: "..."    # Helps Claude provide correct values
+#         required: true/false  # Is this parameter required?
+#         type: string/number/boolean/array
+#         cli_flag: "--flag"    # How it maps to CLI (null for positional)
+#         default: "value"      # Optional default value
+#     static_flags:             # Flags always added to the command
+#       - "--output"
+#       - "json"
+#     example_output:           # Optional but recommended!
+#       status: "success"       # Shows Claude what to expect
+#       data: {...}            
+
+tools:
+  # ===========================
+  # BUILT-IN TOOLS
+  # ===========================
+  # These demonstrate different patterns. Modify or remove as needed.
+
+  # Basic arithmetic - shows how to wrap simple commands
+  # Note: These need special internal handlers since they don't map to real CLI tools
+  - name: add
+    description: Add two numbers together
+    command: internal
+    args:
+      - name: a
+        description: First number to add
+        required: true
+        type: number
+        cli_flag: null  # Positional argument
+      - name: b
+        description: Second number to add
+        required: true
+        type: number
+        cli_flag: null  # Positional argument
+    internal_handler: add  # Special flag for built-in handlers
+    example_output:
+      result: 8
+      operation: "addition"
+
+  - name: multiply
+    description: Multiply two numbers
+    command: internal
+    args:
+      - name: a
+        description: First number to multiply
+        required: true
+        type: number
+        cli_flag: null
+      - name: b
+        description: Second number to multiply
+        required: true
+        type: number
+        cli_flag: null
+    internal_handler: multiply
+    example_output:
+      result: 42
+      operation: "multiplication"
+
+  # File listing - shows internal handler for cross-platform compatibility
+  - name: list_files
+    description: List files in a directory
+    command: internal
+    args:
+      - name: path
+        description: Directory path (defaults to current directory)
+        required: false
+        type: string
+        default: "."
+        cli_flag: null
+    internal_handler: list_files
+    example_output:
+      path: "."
+      files:
+        - name: "example.txt"
+          is_dir: false
+          size: 1024
+        - name: "subfolder"
+          is_dir: true
+          size: 4096
+
+  # ===========================
+  # EXAMPLE REAL CLI TOOLS
+  # ===========================
+  # These show how to wrap actual CLI tools that return JSON
+
+  # JSON formatter using jq (if installed)
+  - name: json_prettify
+    description: Pretty print and filter JSON data using jq
+    command: jq
+    args:
+      - name: filter
+        description: |
+          JQ filter expression. Examples:
+          - "." for pretty print
+          - ".field" to extract a field
+          - ".[0]" for first array element
+        required: false
+        type: string
+        default: "."
+        cli_flag: null  # Positional argument for jq
+    example_output:
+      formatted: "data"
+      pretty: true
+
+  # ===========================
+  # YOUR CUSTOM TOOLS GO HERE
+  # ===========================
+  # Add your own CLI tools below. Here are some patterns:
+
+  # # Example: Tool with multiple flag types
+  # - name: my_analyzer
+  #   description: Analyze data with various options
+  #   command: /usr/local/bin/analyzer
+  #   args:
+  #     # String argument with long flag
+  #     - name: input_file
+  #       description: Path to input data file
+  #       required: true
+  #       type: string
+  #       cli_flag: "--input"    # Becomes: --input /path/to/file
+  #     
+  #     # Number argument with short flag
+  #     - name: threshold
+  #       description: Analysis threshold (0-100)
+  #       required: false
+  #       type: number
+  #       cli_flag: "-t"         # Becomes: -t 75
+  #       default: "50"
+  #     
+  #     # Boolean flag (only added if true)
+  #     - name: verbose
+  #       description: Enable verbose output
+  #       required: false
+  #       type: boolean
+  #       cli_flag: "-v"         # Added as: -v (only if verbose=true)
+  #     
+  #     # Array argument (passed as JSON string)
+  #     - name: metrics
+  #       description: List of metrics to calculate
+  #       required: false
+  #       type: array
+  #       cli_flag: "--metrics"  # Becomes: --metrics '["cpu","memory"]'
+  #   
+  #   # Static flags always added
+  #   static_flags:
+  #     - "--format"
+  #     - "json"
+  #     - "--no-color"
+  #   
+  #   example_output:
+  #     status: "success"
+  #     metrics:
+  #       cpu: 45.2
+  #       memory: 78.9
+  #     timestamp: "2024-01-25T10:30:00Z"
+
+  # # Example: Positional arguments
+  # - name: file_converter
+  #   description: Convert files between formats
+  #   command: /usr/bin/convert
+  #   args:
+  #     # Positional args have cli_flag: null
+  #     - name: source
+  #       description: Source file path
+  #       required: true
+  #       type: string
+  #       cli_flag: null        # First positional
+  #     
+  #     - name: destination
+  #       description: Destination file path
+  #       required: true
+  #       type: string
+  #       cli_flag: null        # Second positional
+  #     
+  #     # Then named flags
+  #     - name: format
+  #       description: Output format
+  #       required: false
+  #       type: string
+  #       cli_flag: "--format"
+  #       default: "json"
+
+  # # Example: Working with existing work tools
+  # - name: deployment_status
+  #   description: |
+  #     Check deployment status across environments.
+  #     Returns current versions, health status, and recent changes.
+  #   command: /opt/company/bin/deploy-tool
+  #   args:
+  #     - name: environment
+  #       description: Target environment (dev, staging, prod)
+  #       required: true
+  #       type: string
+  #       cli_flag: "--env"
+  #     
+  #     - name: service
+  #       description: Specific service to check (omit for all)
+  #       required: false
+  #       type: string
+  #       cli_flag: "--service"
+  #     
+  #     - name: include_history
+  #       description: Include deployment history
+  #       required: false
+  #       type: boolean
+  #       cli_flag: "--history"
+  #   
+  #   static_flags:
+  #     - "--output=json"      # Your tool's JSON flag
+  #   
+  #   example_output:
+  #     environment: "production"
+  #     services:
+  #       - name: "api"
+  #         version: "2.3.1"
+  #         status: "healthy"
+  #         last_deploy: "2024-01-24T18:45:00Z"
+  #       - name: "worker"
+  #         version: "2.3.0"
+  #         status: "healthy"
+  #         last_deploy: "2024-01-23T10:30:00Z"
+
+# TIPS FOR SUCCESS
+# ---------------
+# 1. Test your CLI tools manually first:
+#    $ /path/to/tool --arg value
+#    Make sure they return valid JSON
+#
+# 2. Provide example_output for better Claude understanding
+#    Run the tool once and paste real output
+#
+# 3. Use descriptive names and descriptions
+#    This helps Claude know when to use each tool
+#
+# 4. Handle errors in your tools
+#    Return JSON errors like: {"error": "File not found"}
+#
+# 5. Keep security in mind
+#    - Don't expose sensitive tools without careful thought
+#    - Consider using read-only tools where possible
+#    - Validate inputs in your CLI tools
+#
+# TROUBLESHOOTING
+# --------------
+# - Tool not appearing: Check Claude Desktop logs with --mcp-debug
+# - Command not found: Use absolute paths for commands
+# - Invalid JSON: Test your tool's output with: tool | jq '.'
+# - Permission denied: Ensure tools are executable

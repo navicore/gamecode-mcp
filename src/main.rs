@@ -1,78 +1,68 @@
 use rmcp::{schemars, tool, ServerHandler, ServiceExt};
 use tokio::io::{stdin, stdout};
+use std::collections::HashMap;
 
 mod cli_tool;
 mod tool_registry;
+mod dynamic_tools;
+
+use dynamic_tools::DynamicToolManager;
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-pub struct AddRequest {
-    #[schemars(description = "First number to add")]
-    pub a: f64,
-    #[schemars(description = "Second number to add")]
-    pub b: f64,
-}
-
-#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-pub struct MultiplyRequest {
-    #[schemars(description = "First number to multiply")]
-    pub a: f64,
-    #[schemars(description = "Second number to multiply")]
-    pub b: f64,
-}
-
-#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-pub struct ListFilesRequest {
-    #[schemars(description = "Directory path (defaults to current directory)")]
-    pub path: Option<String>,
+pub struct RunToolRequest {
+    #[schemars(description = "Name of the tool to execute")]
+    pub tool: String,
+    #[schemars(description = "Parameters for the tool as key-value pairs")]
+    pub params: HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone)]
-pub struct GameCodeMcpServer;
+pub struct GameCodeMcpServer {
+    tool_manager: DynamicToolManager,
+}
 
+impl GameCodeMcpServer {
+    pub fn new() -> Self {
+        let tool_manager = DynamicToolManager::new();
+        
+        // Load tools synchronously during initialization
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        if let Err(e) = rt.block_on(tool_manager.load_from_default_locations()) {
+            eprintln!("WARNING: {}", e);
+            eprintln!("\nThe server will start but no tools will be available.");
+            eprintln!("Please create a tools.yaml file to enable tools.");
+        }
+        
+        Self { tool_manager }
+    }
+}
+
+// Dynamic tool execution - all tools come from YAML now
 #[tool(tool_box)]
 impl GameCodeMcpServer {
-    #[tool(description = "Add two numbers together")]
-    async fn add(&self, #[tool(aggr)] req: AddRequest) -> String {
-        let result = req.a + req.b;
-        format!("{{\"result\": {}, \"operation\": \"addition\"}}", result)
-    }
-
-    #[tool(description = "Multiply two numbers")]
-    async fn multiply(&self, #[tool(aggr)] req: MultiplyRequest) -> String {
-        let result = req.a * req.b;
-        format!(
-            "{{\"result\": {}, \"operation\": \"multiplication\"}}",
-            result
-        )
-    }
-
-    #[tool(description = "List files in a directory")]
-    async fn list_files(&self, #[tool(aggr)] req: ListFilesRequest) -> String {
-        let path = req.path.unwrap_or_else(|| ".".to_string());
-
-        match std::fs::read_dir(&path) {
-            Ok(entries) => {
-                let mut files = Vec::new();
-                entries.into_iter().for_each(|entry| {
-                    if let Ok(entry) = entry {
-                        if let Ok(metadata) = entry.metadata() {
-                            files.push(format!(
-                                "{{\"name\": \"{}\", \"is_dir\": {}, \"size\": {}}}",
-                                entry.file_name().to_string_lossy(),
-                                metadata.is_dir(),
-                                metadata.len()
-                            ));
-                        }
-                    }
-                });
-                format!(
-                    "{{\"path\": \"{}\", \"files\": [{}]}}",
-                    path,
-                    files.join(", ")
-                )
-            }
-            Err(e) => format!("{{\"error\": \"{}\"}}", e),
+    #[tool(description = "Execute a tool defined in tools.yaml")]
+    async fn run(&self, #[tool(aggr)] req: RunToolRequest) -> String {
+        match self.tool_manager.execute_tool(&req.tool, req.params).await {
+            Ok(result) => result,
+            Err(e) => format!(r#"{{"error": "{}"}}"#, e),
         }
+    }
+    
+    #[tool(description = "List all available tools from tools.yaml")]
+    async fn list_tools(&self) -> String {
+        let tools = self.tool_manager.list_tools().await;
+        
+        let tool_list: Vec<serde_json::Value> = tools.into_iter()
+            .map(|(name, desc)| serde_json::json!({
+                "name": name,
+                "description": desc
+            }))
+            .collect();
+        
+        serde_json::json!({
+            "tools": tool_list,
+            "total": tool_list.len()
+        }).to_string()
     }
 }
 
@@ -91,30 +81,33 @@ impl ServerHandler for GameCodeMcpServer {
                 name: "gamecode".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
             },
-            instructions: Some("GameCode MCP Server - Provides tools for arithmetic operations and file listing".to_string()),
+            instructions: Some(
+                "GameCode MCP Server - Dynamic CLI tool integration. Configure tools in tools.yaml".to_string()
+            ),
         }
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    eprintln!("Starting GameCode MCP Server...");
-    eprintln!("Creating server instance...");
+    eprintln!("Starting GameCode MCP Server v{}...", env!("CARGO_PKG_VERSION"));
+    eprintln!("Loading tool configuration...");
 
-    let server = GameCodeMcpServer;
-    eprintln!("Server instance created");
+    let server = GameCodeMcpServer::new();
+    eprintln!("Server initialized");
 
     let transport = (stdin(), stdout());
     eprintln!("Transport setup complete");
 
-    eprintln!("Attempting to serve...");
+    eprintln!("Starting MCP service...");
     let service = match server.serve(transport).await {
         Ok(s) => {
-            eprintln!("Service created successfully!");
+            eprintln!("MCP service started successfully!");
+            eprintln!("Use 'list_tools' to see available tools");
             s
         }
         Err(e) => {
-            eprintln!("ERROR: Failed to create service: {:?}", e);
+            eprintln!("ERROR: Failed to start MCP service: {:?}", e);
             return Err(e.into());
         }
     };

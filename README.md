@@ -1,26 +1,24 @@
 # GameCode MCP Server
 
-A Rust-based MCP (Model Context Protocol) server that provides built-in tools and dynamic CLI tool integration for Claude.
+A Rust-based MCP (Model Context Protocol) server that provides dynamic CLI tool integration for Claude through a simple YAML configuration.
 
 ## Features
 
-### Built-in Tools
-
-1. **add** - Add two numbers together
-   - Parameters: `a` (number), `b` (number)
-   - Returns: JSON with result and operation
-
-2. **multiply** - Multiply two numbers
-   - Parameters: `a` (number), `b` (number)
-   - Returns: JSON with result and operation
-
-3. **list_files** - List files in a directory
-   - Parameters: `path` (optional string, defaults to current directory)
-   - Returns: JSON with path and array of file information
-
 ### Dynamic CLI Tool Integration
 
-The server can dynamically load and execute any CLI tool that returns JSON. Simply define your tools in `tools.yaml` and they become available to Claude instantly - no code changes required!
+The server loads all tools from a `tools.yaml` configuration file. This means:
+- **No hardcoded tools** - Everything is configurable
+- **Add any CLI tool** that returns JSON
+- **Built-in tools included** - Basic arithmetic and file operations come pre-configured
+- **Hot reload** - Just restart Claude Desktop after editing tools.yaml
+
+### Example Built-in Tools (from tools.yaml)
+
+1. **add** - Add two numbers together
+2. **multiply** - Multiply two numbers  
+3. **list_files** - List files in a directory
+
+All tools are defined in your `tools.yaml` file - remove what you don't need, add your own!
 
 ## Installation
 
@@ -58,28 +56,45 @@ The server can dynamically load and execute any CLI tool that returns JSON. Simp
 
 2. Restart Claude Desktop to load the MCP server.
 
+## Configuration
+
+The server looks for `tools.yaml` in these locations (in order):
+1. Path specified in `$GAMECODE_TOOLS_FILE` environment variable
+2. `~/.config/gamecode-mcp/tools.yaml` (recommended)
+3. `./tools.yaml` (current directory)
+
+To get started:
+```bash
+# Create config directory
+mkdir -p ~/.config/gamecode-mcp
+
+# Copy the example configuration with all built-in tools and documentation
+cp tools.yaml.example ~/.config/gamecode-mcp/tools.yaml
+
+# Edit to customize and add your own tools
+edit ~/.config/gamecode-mcp/tools.yaml
+```
+
 ## Adding Your Own CLI Tools
 
-1. Create or edit `tools.yaml` in the project root:
-   ```yaml
-   tools:
-     - name: my_tool
-       description: Description of what the tool does
-       command: /path/to/your/tool
-       args:
-         - name: input
-           description: Input parameter
-           required: true
-           type: string
-           cli_flag: "--input"
-       example_output:
-         status: "success"
-         data: "example output"
-   ```
+Edit your `tools.yaml` file to add new tools:
+```yaml
+tools:
+  - name: my_tool
+    description: Description of what the tool does
+    command: /path/to/your/tool
+    args:
+      - name: input
+        description: Input parameter
+        required: true
+        type: string
+        cli_flag: "--input"
+    example_output:
+      status: "success"
+      data: "example output"
+```
 
-2. Restart the MCP server (restart Claude Desktop)
-
-3. Your tool is now available to Claude!
+Then restart Claude Desktop to load the new tools.
 
 See the `examples/` directory for:
 - Complete tool configuration examples
@@ -89,13 +104,15 @@ See the `examples/` directory for:
 ## Testing
 
 Once integrated, you can test the tools in Claude by asking:
-- "Use the gamecode add tool to add 5 and 3"
-- "Use the gamecode multiply tool to multiply 4 and 7"
-- "Use the gamecode list_files tool to show files in the current directory"
+- "Use the gamecode run tool to execute add with a=5 and b=3"
+- "Use the gamecode run tool to execute multiply with a=4 and b=7"
+- "Use the gamecode run tool to execute list_files with path='.'"
+- "Use the gamecode list_tools to see all available tools"
 
-For dynamic tools:
-- "Use the run_tool to execute json_format with filter '.'"
-- "List all available dynamic tools"
+Or more naturally:
+- "List all available gamecode tools"
+- "Add 5 and 3 using gamecode"
+- "Show files in the current directory using gamecode"
 
 ## Development
 
@@ -113,9 +130,11 @@ Test the server manually:
 
 1. **Server not appearing in Claude**: Make sure the binary is in your PATH and Claude Desktop has been restarted.
 
-2. **Tools not working**: Check Claude Desktop logs (run with `--mcp-debug` flag) for error messages.
+2. **No tools available**: The server will show an error message with instructions if no `tools.yaml` is found. Check that your file is in one of the expected locations.
 
-3. **Dynamic tools not loading**: Ensure `tools.yaml` is valid YAML and in the project root.
+3. **Tools not working**: Check Claude Desktop logs (run with `--mcp-debug` flag) for error messages. Verify your CLI tools return valid JSON.
+
+4. **Configuration not loading**: Ensure `tools.yaml` is valid YAML. You can test with: `cat tools.yaml | yq '.'`
 
 ## License
 

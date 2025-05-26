@@ -1,6 +1,6 @@
-use crate::cli_tool::{CliTool, CliArg, ArgType};
-use std::collections::HashMap;
+use crate::cli_tool::{ArgType, CliArg, CliTool};
 use serde_json::Value;
+use std::collections::HashMap;
 
 pub struct ToolRegistry {
     tools: HashMap<String, CliTool>,
@@ -12,23 +12,23 @@ impl ToolRegistry {
             tools: HashMap::new(),
         }
     }
-    
+
     pub fn register(&mut self, tool: CliTool) {
         self.tools.insert(tool.name.clone(), tool);
     }
-    
+
     pub fn get(&self, name: &str) -> Option<&CliTool> {
         self.tools.get(name)
     }
-    
+
     pub fn list_tools(&self) -> Vec<&CliTool> {
         self.tools.values().collect()
     }
-    
+
     // Helper to create a sample registry with example tools
     pub fn with_examples() -> Self {
         let mut registry = Self::new();
-        
+
         // Example: A JSON formatter tool
         registry.register(CliTool {
             name: "json_format".to_string(),
@@ -50,8 +50,9 @@ impl ToolRegistry {
                     cli_flag: Some("-c".to_string()),
                 },
             ],
+            internal_handler: None,
         });
-        
+
         // Example: A file info tool
         registry.register(CliTool {
             name: "file_info".to_string(),
@@ -73,8 +74,9 @@ impl ToolRegistry {
                     cli_flag: Some("-f".to_string()),
                 },
             ],
+            internal_handler: None,
         });
-        
+
         registry
     }
 }
@@ -83,20 +85,29 @@ impl ToolRegistry {
 impl CliTool {
     pub fn to_mcp_metadata(&self) -> serde_json::Value {
         let mut params = serde_json::Map::new();
-        
+
         for arg in &self.args {
             let mut field = serde_json::Map::new();
-            field.insert("description".to_string(), Value::String(arg.description.clone()));
-            field.insert("type".to_string(), Value::String(match arg.arg_type {
-                ArgType::String => "string",
-                ArgType::Number => "number",
-                ArgType::Boolean => "boolean",
-                ArgType::Array => "array",
-            }.to_string()));
-            
+            field.insert(
+                "description".to_string(),
+                Value::String(arg.description.clone()),
+            );
+            field.insert(
+                "type".to_string(),
+                Value::String(
+                    match arg.arg_type {
+                        ArgType::String => "string",
+                        ArgType::Number => "number",
+                        ArgType::Boolean => "boolean",
+                        ArgType::Array => "array",
+                    }
+                    .to_string(),
+                ),
+            );
+
             params.insert(arg.name.clone(), Value::Object(field));
         }
-        
+
         serde_json::json!({
             "name": self.name,
             "description": self.description,

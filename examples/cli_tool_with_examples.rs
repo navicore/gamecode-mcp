@@ -17,13 +17,13 @@ pub struct ToolDefinitionWithExample {
 impl ToolDefinitionWithExample {
     pub fn generate_full_description(&self) -> String {
         let mut desc = self.description.clone();
-        
+
         if let Some(example) = &self.example_output {
             desc.push_str("\n\nExample output:\n```json\n");
             desc.push_str(&serde_json::to_string_pretty(example).unwrap_or_default());
             desc.push_str("\n```");
         }
-        
+
         desc
     }
 }
