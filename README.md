@@ -75,8 +75,8 @@ All tools are defined in your `tools.yaml` file - remove what you don't need, ad
 
 The server looks for `tools.yaml` in these locations (in order):
 1. Path specified in `$GAMECODE_TOOLS_FILE` environment variable
-2. `~/.config/gamecode-mcp/tools.yaml` (recommended)
-3. `./tools.yaml` (current directory)
+2. `./tools.yaml` (current directory - for project-specific tools)
+3. `~/.config/gamecode-mcp/tools.yaml` (user defaults)
 
 To get started:
 ```bash
@@ -135,6 +135,43 @@ For development, you can run the server directly:
 ```bash
 cargo run
 ```
+
+## Audit Logging
+
+The server supports optional audit logging of all tool invocations:
+
+```bash
+# Enable audit logging when configuring the MCP server
+claude mcp add gamecode -s local ~/.cargo/bin/gamecode-mcp -- --audit-log ~/.config/gamecode-mcp/audit/
+```
+
+Audit logs are written to daily rotating files in the specified directory:
+- `audit-2024-01-25.jsonl` - One file per day
+- `audit-2024-01-26.jsonl` - Automatic rotation at midnight
+
+The audit log records:
+- **Timestamp** - When the tool was invoked (UTC)
+- **Tool name** - Which tool was called
+- **User** - System username (from $USER environment variable)
+- **Hostname** - Device identifier for correlation with other logs
+
+Example audit entries:
+```json
+{"timestamp":"2024-01-25T10:30:00Z","tool_name":"add","user":"jsmith","hostname":"jsmith-macbook.local"}
+{"timestamp":"2024-01-25T10:30:01Z","tool_name":"list_files","user":"jsmith","hostname":"lab-desktop-03"}
+```
+
+### Security Considerations
+
+**Important**: For security and privacy reasons, the audit log intentionally does **NOT** record:
+  - Tool input parameters
+  - Tool output/results
+  - Any sensitive data
+
+This design ensures that sensitive information (passwords, API keys, personal
+data, etc.) passed to tools is never persisted in audit logs. Organizations
+should correlate these audit records with other access control and monitoring
+systems to maintain full visibility while preserving security.
 
 ## Troubleshooting
 

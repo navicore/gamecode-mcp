@@ -1,11 +1,16 @@
 use rmcp::{ServerHandler, ServiceExt, schemars, tool};
 use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use tokio::io::{stdin, stdout};
 use tracing::{debug, error, info, warn};
+use flag_rs::{CommandBuilder, Flag, FlagType, FlagValue};
 
+mod audit;
 mod cli_tool;
 mod dynamic_tools;
 
+use audit::AuditJournal;
 use dynamic_tools::DynamicToolManager;
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
@@ -16,15 +21,17 @@ pub struct RunToolRequest {
     pub params: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct GameCodeMcpServer {
     tool_manager: DynamicToolManager,
+    audit: AuditJournal,
 }
 
 impl GameCodeMcpServer {
-    pub fn new() -> Self {
+    pub fn new(audit: AuditJournal) -> Self {
         Self {
             tool_manager: DynamicToolManager::new(),
+            audit,
         }
     }
 
@@ -42,6 +49,9 @@ impl GameCodeMcpServer {
 impl GameCodeMcpServer {
     #[tool(description = "Execute a tool defined in tools.yaml")]
     async fn run(&self, #[tool(aggr)] req: RunToolRequest) -> String {
+        // Log tool invocation to audit journal
+        self.audit.log_tool_invocation(&req.tool).await;
+        
         match self.tool_manager.execute_tool(&req.tool, req.params).await {
             Ok(result) => result,
             Err(e) => format!(r#"{{"error": "{}"}}"#, e),
@@ -102,13 +112,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_writer(std::io::stderr)
         .init();
 
+    // Parse command line arguments
+    let audit_log = Arc::new(Mutex::new(String::new()));
+    let audit_log_clone = Arc::clone(&audit_log);
+    
+    let app = CommandBuilder::new("gamecode-mcp")
+        .short("GameCode MCP Server")
+        .long("Dynamic CLI tool integration for Claude through YAML configuration")
+        .flag(
+            Flag::new("audit-log")
+                .short('a')
+                .usage("Directory path for audit logs (daily rotating JSON lines format)")
+                .value_type(FlagType::String)
+                .default(FlagValue::String("".to_string()))
+        )
+        .run(move |ctx| {
+            // Get audit log path from flags
+            if let Some(log_path) = ctx.flag("audit-log") {
+                let mut log = audit_log_clone.lock().unwrap();
+                *log = log_path.to_string();
+            }
+            Ok(())
+        })
+        .build();
+    
+    // Execute the app to parse args
+    let args: Vec<String> = std::env::args().collect();
+    if let Err(e) = app.execute(args) {
+        error!("Failed to parse arguments: {}", e);
+        return Err(e.into());
+    }
+    
+    // Set up audit journal if path provided
+    let audit_log_path = audit_log.lock().unwrap();
+    let audit_path = if !audit_log_path.is_empty() {
+        Some(PathBuf::from(audit_log_path.clone()))
+    } else {
+        None
+    };
+    drop(audit_log_path);
+    let audit = AuditJournal::new(audit_path);
+
     info!(
         "Starting GameCode MCP Server v{}...",
         env!("CARGO_PKG_VERSION")
     );
+    if audit.is_enabled() {
+        info!("Audit logging enabled");
+    }
     info!("Loading tool configuration...");
 
-    let server = GameCodeMcpServer::new();
+    let server = GameCodeMcpServer::new(audit);
 
     // Initialize the server and load tools
     server.initialize().await;
