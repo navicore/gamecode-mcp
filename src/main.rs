@@ -23,17 +23,17 @@ pub struct GameCodeMcpServer {
 
 impl GameCodeMcpServer {
     pub fn new() -> Self {
-        let tool_manager = DynamicToolManager::new();
-        
-        // Load tools synchronously during initialization
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        if let Err(e) = rt.block_on(tool_manager.load_from_default_locations()) {
+        Self {
+            tool_manager: DynamicToolManager::new(),
+        }
+    }
+    
+    pub async fn initialize(&self) {
+        if let Err(e) = self.tool_manager.load_from_default_locations().await {
             eprintln!("WARNING: {}", e);
             eprintln!("\nThe server will start but no tools will be available.");
             eprintln!("Please create a tools.yaml file to enable tools.");
         }
-        
-        Self { tool_manager }
     }
 }
 
@@ -94,6 +94,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("Loading tool configuration...");
 
     let server = GameCodeMcpServer::new();
+    
+    // Initialize the server and load tools
+    server.initialize().await;
     eprintln!("Server initialized");
 
     let transport = (stdin(), stdout());
