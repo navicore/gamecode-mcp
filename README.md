@@ -124,11 +124,6 @@ For development, you can run the server directly:
 cargo run
 ```
 
-Test the server manually:
-```bash
-./test_server.sh
-```
-
 ## Troubleshooting
 
 1. **Server not appearing in Claude**: Make sure the binary is in your PATH and Claude Desktop has been restarted.
