@@ -1,6 +1,7 @@
 [![Dependabot Updates](https://github.com/navicore/gamecode-mcp/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/navicore/gamecode-mcp/actions/workflows/dependabot/dependabot-updates)
 [![Rust CI](https://github.com/navicore/gamecode-mcp/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/navicore/gamecode-mcp/actions/workflows/rust-ci.yml)
 
+# a naive but fun exploration into the MCP ideas ... but replaced with my next effort - see https://github.com/navicore/gamecode-mcp2
 # GameCode MCP Server
 
 A Rust-based MCP (Model Context Protocol) server that provides dynamic CLI tool
